@@ -22,4 +22,12 @@ jobs:
           wget --no-verbose https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
           tar xjf gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
           rm -f gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
+      - name: Fetch SDKs
+        run: |
+          wget --no-verbose https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/nrf5_sdk_17.1.0_ddde560.zip
+          unzip -q nrf5_sdk_17.1.0_ddde560.zip
+          rm -f nrf5_sdk_17.1.0_ddde560.zip
+          wget --no-verbose https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/nrf5sdk110089a8197.zip
+          unzip -q nrf5sdk110089a8197.zip
+          rm -f nrf5sdk110089a8197.zip
           find .
