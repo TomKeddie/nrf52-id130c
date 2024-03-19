@@ -44,7 +44,7 @@ jobs:
         run: |
           cp -f dfu_public_key.c nRF5_SDK_17.1.0_ddde560/examples/dfu/
           cd nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/pca10040_s132_ble/armgcc
-          make SDK_ROOT=${GITHUB_WORKSPACE}/nRF5_SDK_17.1.0_ddde560
+          make SDK_ROOT=${GITHUB_WORKSPACE}/nRF5_SDK_17.1.0_ddde560 GNU_INSTALL_ROOT=$(GITHUB_WORKSPACE)/gcc-arm-none-eabi-9-2020-q2-update/bin/
           cd -
       - name: Dump filesystem to log
         run: |
