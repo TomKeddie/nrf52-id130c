@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  run:
     runs-on: ubuntu-latest
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -40,3 +40,13 @@ jobs:
           chmod 755 nrfutil
           ./nrfutil install nrf5sdk-tools
           cd -
+      - name: Dump filesystem to log
+        run: |
+          find . >log.txt
+      - name: Publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-file
+          path: log.txt
+          
+    
