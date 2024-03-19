@@ -27,10 +27,10 @@ jobs:
       - name: Fetch SDKs
         run: |
           wget --no-verbose https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/nrf5_sdk_17.1.0_ddde560.zip
-          unzip -q nrf5_sdk_17.1.0_ddde560.zip
+          unzip -d nrf5_sdk_17.1.0_ddde560 -q nrf5_sdk_17.1.0_ddde560.zip
           rm -f nrf5_sdk_17.1.0_ddde560.zip
           wget --no-verbose https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/nrf5sdk110089a8197.zip
-          unzip -q nrf5sdk110089a8197.zip
+          unzip -d nrf5sdk110089a8197 -q nrf5sdk110089a8197.zip
           rm -f nrf5sdk110089a8197.zip
       - name: Install nrfutil
         run: |
