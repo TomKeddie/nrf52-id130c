@@ -1,0 +1,3 @@
+[submodule "mega-dfu"]
+	path = mega-dfu
+	url = git@github.com:richard-sim/mega-dfu.git
