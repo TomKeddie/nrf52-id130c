@@ -17,9 +17,9 @@ jobs:
       - name: Fetch tools
         run: |
           wget --no-verbose https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q1-update/+download/gcc-arm-none-eabi-4_9-2015q1-20150306-linux.tar.bz2
-          tar xvjf gcc-arm-none-eabi-4_9-2015q1-20150306-linux.tar.bz2
+          tar xjf gcc-arm-none-eabi-4_9-2015q1-20150306-linux.tar.bz2
           rm -f gcc-arm-none-eabi-4_9-2015q1-20150306-linux.tar.bz2
           wget --no-verbose https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
-          tar xvjf gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
+          tar xjf gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
           rm -f gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2
           find .
