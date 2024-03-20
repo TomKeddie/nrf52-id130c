@@ -34,7 +34,7 @@ jobs:
           rm -f nrf5sdk110089a8197.zip
           cp -f Makefile.posix.17.1 nRF5_SDK_17.1.0_ddde560/components/toolchain/gcc/Makefile.posix
           cp -f Makefile.posix.11.0 nRF5_SDK_11.0.0_89a8197/components/toolchain/gcc/Makefile.posix
-      - name: Patch SDK with uECC
+      - name: Patch SDK 17.1 with uECC
         run: |
           cd nRF5_SDK_17.1.0_ddde560/external/micro-ecc
           git clone https://github.com/kmackay/micro-ecc
@@ -60,8 +60,11 @@ jobs:
           nrfutil/nrfutil pkg generate --hw-version 52 --sd-req 0xB7 --sd-id 0xB7 --key-file dfu_private_key.pem --softdevice nRF5_SDK_17.1.0_ddde560/components/softdevice/s132/hex/s132_nrf52_7.2.0_softdevice.hex --bootloader-version 1 --bootloader nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/pca10040_s132_ble/armgcc/_build/nrf52832_xxaa_s132.hex sdk-17-dfu-package-bootloader.zip
           unzip -q sdk-17-dfu-package-bootloader.zip sd_bl.bin
           mv sd_bl.bin mega-dfu/megadfu
-      - name: Build megadfu with SDK 11
+      - name: Build megadfu-finalize and megadfu with SDK 11
         run: |
+          cd mega-dfu/megadfu-finalize
+          make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197 GITHUB_WORKSPACE=${GITHUB_WORKSPACE}
+          cd ${GITHUB_WORKSPACE}
           cd mega-dfu/megadfu
           make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197 GITHUB_WORKSPACE=${GITHUB_WORKSPACE}
           cd ${GITHUB_WORKSPACE}
