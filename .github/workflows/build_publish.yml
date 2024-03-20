@@ -65,6 +65,7 @@ jobs:
           cd mega-dfu/megadfu-finalize
           make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197 GITHUB_WORKSPACE=${GITHUB_WORKSPACE}
           cd ${GITHUB_WORKSPACE}
+          chmod 755 mega-dfu/megadfu/lz4
           cd mega-dfu/megadfu
           make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197 GITHUB_WORKSPACE=${GITHUB_WORKSPACE}
           cd ${GITHUB_WORKSPACE}
