@@ -62,7 +62,7 @@ jobs:
       - name: Build megadfu with SDK 11
         run: |
           cd mega-dfu/megadfu
-          make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197
+          make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197 GITHUB_WORKSPACE=${GITHUB_WORKSPACE}
           cd ${GITHUB_WORKSPACE}
       - name: Dump filesystem to log
         if: always()
