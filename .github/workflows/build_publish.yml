@@ -33,6 +33,7 @@ jobs:
           unzip -d nRF5_SDK_11.0.0_89a8197 -q nrf5sdk110089a8197.zip
           rm -f nrf5sdk110089a8197.zip
           cp -f Makefile.posix.17.1 nRF5_SDK_17.1.0_ddde560/components/toolchain/gcc/Makefile.posix
+          cp -f Makefile.posix.11.0 nRF5_SDK_11.0.0_89a8197/components/toolchain/gcc/Makefile.posix
       - name: Patch SDK with uECC
         run: |
           cd nRF5_SDK_17.1.0_ddde560/external/micro-ecc
