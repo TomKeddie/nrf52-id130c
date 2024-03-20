@@ -22,7 +22,7 @@ jobs:
           tar xjf gcc-arm-none-eabi-4_9-2015q1-20150306-linux.tar.bz2
           rm -f gcc-arm-none-eabi-4_9-2015q1-20150306-linux.tar.bz2
           wget --no-verbose https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
-          tar xjf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz
+          tar xjf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
           rm -f gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz
       - name: Fetch SDKs
         run: |
