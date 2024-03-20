@@ -65,10 +65,12 @@ jobs:
           make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197
           cd ${GITHUB_WORKSPACE}
       - name: Dump filesystem to log
+        if: always()
         run: |
           pwd > log.txt
           find . >>log.txt
       - name: Publish
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: results
