@@ -62,13 +62,16 @@ jobs:
           unzip -q sdk-17-dfu-package-bootloader.zip sd_bl.bin
           mv sd_bl.bin mega-dfu/megadfu/
           mv nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/pca10040_s132_ble/armgcc/_build/bootloader_setting.hex mega-dfu/megadfu/
-      - name: Build megadfu-finalize and megadfu with SDK 11
+      - name: Build megadfu-finalize, megadfu and megadfu-bootstrap with SDK 11 and SDK17.1 bootloader as payload
         run: |
           cd mega-dfu/megadfu-finalize
           make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197 GITHUB_WORKSPACE=${GITHUB_WORKSPACE}
           cd ${GITHUB_WORKSPACE}
           chmod 755 mega-dfu/megadfu/lz4
           cd mega-dfu/megadfu
+          make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197 GITHUB_WORKSPACE=${GITHUB_WORKSPACE}
+          cd ${GITHUB_WORKSPACE}
+          cd mega-dfu/megadfu-bootstrap
           make NRF_SDK_PATH=${GITHUB_WORKSPACE}/nRF5_SDK_11.0.0_89a8197 GITHUB_WORKSPACE=${GITHUB_WORKSPACE}
           cd ${GITHUB_WORKSPACE}
       - name: Dump filesystem to log
