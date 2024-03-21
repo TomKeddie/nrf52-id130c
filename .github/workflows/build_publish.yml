@@ -79,7 +79,7 @@ jobs:
         if: always()
         run: |
           pwd > log.txt
-          find . >>log.txt
+          find . -ls >>log.txt
       - name: Publish
         if: always()
         uses: actions/upload-artifact@v4
