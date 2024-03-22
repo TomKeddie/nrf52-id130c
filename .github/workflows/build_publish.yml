@@ -34,6 +34,7 @@ jobs:
           rm -f nrf5sdk110089a8197.zip
           cp -f Makefile.posix.17.1 nRF5_SDK_17.1.0_ddde560/components/toolchain/gcc/Makefile.posix
           cp -f Makefile.posix.11.0 nRF5_SDK_11.0.0_89a8197/components/toolchain/gcc/Makefile.posix
+          cp -f sdk_config.h nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/pca10040_s132_ble/config/
       - name: Patch SDK 17.1 with uECC
         run: |
           cd nRF5_SDK_17.1.0_ddde560/external/micro-ecc
