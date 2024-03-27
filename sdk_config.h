@@ -1160,7 +1160,7 @@
 
 // <s> NRF_DFU_BLE_ADV_NAME - Default advertising name.
 #ifndef NRF_DFU_BLE_ADV_NAME
-#define NRF_DFU_BLE_ADV_NAME "DfuTarg"
+#define NRF_DFU_BLE_ADV_NAME "ID130C_DFU"
 #endif
 
 // <o> NRF_DFU_BLE_ADV_INTERVAL - Advertising interval (in units of 0.625 ms) 
@@ -5194,7 +5194,7 @@
 
 // <o> NRF_SDH_CLOCK_LF_RC_CTIV - SoftDevice calibration timer interval. 
 #ifndef NRF_SDH_CLOCK_LF_RC_CTIV
-#define NRF_SDH_CLOCK_LF_RC_CTIV 1
+#define NRF_SDH_CLOCK_LF_RC_CTIV 16
 #endif
 
 // <o> NRF_SDH_CLOCK_LF_RC_TEMP_CTIV - SoftDevice calibration timer interval under constant temperature. 
@@ -5202,7 +5202,7 @@
 // <i>  if the temperature has not changed.
 
 #ifndef NRF_SDH_CLOCK_LF_RC_TEMP_CTIV
-#define NRF_SDH_CLOCK_LF_RC_TEMP_CTIV 1
+#define NRF_SDH_CLOCK_LF_RC_TEMP_CTIV 16
 #endif
 
 // <o> NRF_SDH_CLOCK_LF_ACCURACY  - External clock accuracy used in the LL to compute timing.
