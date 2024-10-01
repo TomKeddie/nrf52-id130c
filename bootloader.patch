@@ -1,0 +1,4 @@
+144a145,147
+>     nrf_dfu_adv_name_t adv_name = {.crc = 0, .name = "TOM_DFU", .len = 7};
+>     nrf_dfu_settings_adv_name_write(&adv_name);
+>     
