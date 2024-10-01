@@ -1,0 +1,6 @@
+55a56
+> #include "nrf_dfu_settings.h"
+144a146,148
+>     nrf_dfu_adv_name_t adv_name = {.crc = 0, .name = "TOM_DFU", .len = 7};
+>     nrf_dfu_settings_adv_name_write(&adv_name);
+>     
