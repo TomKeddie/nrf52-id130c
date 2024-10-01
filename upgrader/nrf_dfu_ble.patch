@@ -1,0 +1,16 @@
+945,947c945,955
+<         NRF_LOG_DEBUG("Using default advertising name");
+<         device_name = (uint8_t const *)(NRF_DFU_BLE_ADV_NAME);
+<         name_len    = strlen(NRF_DFU_BLE_ADV_NAME);
+---
+>         static uint8_t name[] = "ID130C_00_00_00_00";
+>         name[17]  = (0xf & (NRF_FICR->DEVICEADDR[0] >>  0)) > 9 ? (0xf & (NRF_FICR->DEVICEADDR[0] >>  0)) + 'A' - 10 : (0xf & (NRF_FICR->DEVICEADDR[0] >>  0)) + '0';
+>         name[16]  = (0xf & (NRF_FICR->DEVICEADDR[0] >>  4)) > 9 ? (0xf & (NRF_FICR->DEVICEADDR[0] >>  4)) + 'A' - 10 : (0xf & (NRF_FICR->DEVICEADDR[0] >>  4)) + '0';
+>         name[14]  = (0xf & (NRF_FICR->DEVICEADDR[0] >>  8)) > 9 ? (0xf & (NRF_FICR->DEVICEADDR[0] >>  8)) + 'A' - 10 : (0xf & (NRF_FICR->DEVICEADDR[0] >>  8)) + '0';
+>         name[13]  = (0xf & (NRF_FICR->DEVICEADDR[0] >> 12)) > 9 ? (0xf & (NRF_FICR->DEVICEADDR[0] >> 12)) + 'A' - 10 : (0xf & (NRF_FICR->DEVICEADDR[0] >> 12)) + '0';
+>         name[11]  = (0xf & (NRF_FICR->DEVICEADDR[0] >> 16)) > 9 ? (0xf & (NRF_FICR->DEVICEADDR[0] >> 16)) + 'A' - 10 : (0xf & (NRF_FICR->DEVICEADDR[0] >> 16)) + '0';
+>         name[10]  = (0xf & (NRF_FICR->DEVICEADDR[0] >> 20)) > 9 ? (0xf & (NRF_FICR->DEVICEADDR[0] >> 20)) + 'A' - 10 : (0xf & (NRF_FICR->DEVICEADDR[0] >> 20)) + '0';
+>         name[8]   = (0xf & (NRF_FICR->DEVICEADDR[0] >> 24)) > 9 ? (0xf & (NRF_FICR->DEVICEADDR[0] >> 24)) + 'A' - 10 : (0xf & (NRF_FICR->DEVICEADDR[0] >> 24)) + '0';
+>         name[7]   = (0xf & (NRF_FICR->DEVICEADDR[0] >> 28)) > 9 ? (0xf & (NRF_FICR->DEVICEADDR[0] >> 28)) + 'A' - 10 : (0xf & (NRF_FICR->DEVICEADDR[0] >> 28)) + '0';
+>         device_name = name;
+>         name_len    = sizeof(name);
