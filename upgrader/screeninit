@@ -1,7 +1,7 @@
 screen ~/git/orbcode/orbuculum/build/./orbtrace -p vtpwr,3.3 -e vtpwr,on -T 4
 screen ~/git/orbcode/orbuculum/build/orbuculum --monitor 1000 -t 1,2
-# screen ~/git/orbcode/orbuculum/build/orbtop -I 100 -l -e ${HOME}/Downloads/results_27/nrf52-mega-dfu/megadfu/_build/megadfu.out
+# screen ~/git/orbcode/orbuculum/build/orbtop -I 100 -l -e ${HOME}/Downloads/results_28/upgrader/nrf52-mega-dfu/megadfu/_build/megadfu.out
 # screen ~/git/orbcode/orbuculum/build/orbcat -c 0,"%c"
-screen ~/git/orbcode/orbuculum/build/orbmortem -b 4096 -e ${HOME}/Downloads/results_27/nrf52-mega-dfu/megadfu/_build/megadfu.out -d /home/runner/work/nrf52-id130c/nrf52-id130c
-# screen ~/git/orbcode/orbuculum/build/orbstat -e ${HOME}/Downloads/results_27/nrf52-mega-dfu/megadfu/_build/megadfu.out -z orbstat.out
+screen ~/git/orbcode/orbuculum/build/orbmortem -b 4096 -e ${HOME}/Downloads/results_28/upgrader/nrf52-mega-dfu/megadfu/_build/megadfu.out -d /home/runner/work/nrf52-id130c/nrf52-id130c
+# screen ~/git/orbcode/orbuculum/build/orbstat -e ${HOME}/Downloads/results_28/upgrader/nrf52-mega-dfu/megadfu/_build/megadfu.out -z orbstat.out
 
