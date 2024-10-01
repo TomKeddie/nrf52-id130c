@@ -9,7 +9,7 @@ on:
     branches: [ "main" ]
     paths:
       - upgrader/**
-
+      - .github/workflows/upgrader.yml
   workflow_dispatch:
 
 jobs:
@@ -68,6 +68,7 @@ jobs:
       - name: Build SDK 17.1 bootloader example with our key
         run: |
           cp -f dfu_public_key.c nRF5_SDK_17.1.0_ddde560/examples/dfu/dfu_public_key.c
+          patch -i patch.bootloader nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/main.c
           cd nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/pca10040_s132_ble/armgcc
           make SDK_ROOT=${GITHUB_WORKSPACE}/nRF5_SDK_17.1.0_ddde560 GITHUB_WORKSPACE=${GITHUB_WORKSPACE} VERBOSE=1
           ${GITHUB_WORKSPACE}/nrfutil/nrfutil settings generate --family NRF52 --application _build/nrf52832_xxaa_s132.hex --application-version 1 --bootloader-version 1 --bl-settings-version 1 _build/bootloader_setting.hex
