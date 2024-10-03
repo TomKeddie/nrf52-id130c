@@ -75,7 +75,6 @@
 static const char * test_text = "nRF52 family";
 
 extern const nrf_gfx_font_desc_t orkney_24ptFontInfo;
-extern const nrf_lcd_t nrf_lcd_ili9341;
 extern const nrf_lcd_t nrf_lcd_st7735;
 
 static const nrf_gfx_font_desc_t * p_font = &orkney_24ptFontInfo;
@@ -207,6 +206,21 @@ int main(void)
     NRF_LOG_INFO("GFX usage example application started.")
     NRF_LOG_FLUSH();
 
+    nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+    nrf_gpio_pin_clear(ID130C_PIN_LCD_RST);
+    nrf_gpio_pin_set(ID130C_PIN_LCD_PWR_N);
+    nrf_gpio_cfg_output(ID130C_PIN_LCD_BL_EN);
+    nrf_gpio_cfg_output(ID130C_PIN_LCD_RST);
+    nrf_gpio_cfg_output(ID130C_PIN_LCD_PWR_N);
+
+    // power on display and reset
+    nrf_gpio_pin_set(ID130C_PIN_LCD_RST);
+    nrf_gpio_pin_clear(ID130C_PIN_LCD_PWR_N);
+    nrf_gpio_pin_clear(ID130C_PIN_LCD_RST);
+
+    // backlight on
+    nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
+    
     gfx_initialization();
 
     while (1)
