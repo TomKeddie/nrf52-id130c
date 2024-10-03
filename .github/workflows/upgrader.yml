@@ -3,10 +3,15 @@ name: Build and release megadfu upgrader
 on:
   push:
     branches: [ "main" ]
+    tags:
+      - UPGRADER*
     paths:
       - upgrader/**
+      - .github/workflows/upgrader.yml
   pull_request:
     branches: [ "main" ]
+    tags:
+      - UPGRADER*
     paths:
       - upgrader/**
       - .github/workflows/upgrader.yml
@@ -128,9 +133,9 @@ jobs:
             upgrader/nrf52-mega-dfu/megadfu-finalize/_build/obj/
             upgrader/nrf52-mega-dfu/megadfu/_build/megadfu.*
             upgrader/nrf52-mega-dfu/megadfu/_build/obj/
-            dfu-${{env.MY_TIMESTAMP}}.zip
+            upgrader-${{env.MY_TIMESTAMP}}.zip
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{env.MY_TIMESTAMP}}
-          files: dfu-${{env.MY_TIMESTAMP}}.zip
+          files: upgrader-${{env.MY_TIMESTAMP}}.zip
