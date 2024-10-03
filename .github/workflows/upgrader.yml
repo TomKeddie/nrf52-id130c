@@ -106,7 +106,7 @@ jobs:
           nrfutil dfu --help
           nrfutil dfu genpkg --help
           nrfutil version
-          nrfutil dfu genpkg --dev-revision 616 --dev-type 616 --application ${GITHUB_WORKSPACE}/upgrader/nrf52-mega-dfu/megadfu-bootstrap/_build/megadfu-bootstrap-package.bin ${GITHUB_WORKSPACE}/dfu-${{env.MY_TIMESTAMP}}.zip
+          nrfutil dfu genpkg --dev-revision 616 --dev-type 616 --application ${GITHUB_WORKSPACE}/upgrader/nrf52-mega-dfu/megadfu-bootstrap/_build/megadfu-bootstrap-package.bin ${GITHUB_WORKSPACE}/upgrader-${{env.MY_TIMESTAMP}}.zip
           cd ${GITHUB_WORKSPACE}
       - name: Dump filesystem to log
         run: |
