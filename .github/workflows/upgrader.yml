@@ -3,10 +3,15 @@ name: Build and release megadfu upgrader
 on:
   push:
     branches: [ "main" ]
+    tags:
+      - UPGRADER*
     paths:
       - upgrader/**
+      - .github/workflows/upgrader.yml
   pull_request:
     branches: [ "main" ]
+    tags:
+      - UPGRADER*
     paths:
       - upgrader/**
       - .github/workflows/upgrader.yml
