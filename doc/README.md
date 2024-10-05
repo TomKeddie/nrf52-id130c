@@ -22,6 +22,8 @@ There is a youtube video at showing the process to cut a band open.  Please watc
 
 Now that you have extracted the PCB from the housing you can use this image to connect to the board.  Given this battery operate it is on all the time.  Consider disconnecting the battery before soldering for safety reasons.  You can connect a CMIS-DAP Arm debugger using 3.3v, SWDCLK, SWDIO and GND.  If you attach the debugger before upgrading you'll find the APPPROTECT is enabled and the debugger can't connect.  You can fix this by erasing the device.  Yes APPPROTECT can be bypassed, that is not interesting to us.
 
+- ![Test points](testpoints.jpg)
+
 ### Pins
 
 There is a header file detailing the pins used by the various peripherals in the [include](../include) directory.
