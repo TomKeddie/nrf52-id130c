@@ -38,163 +38,236 @@
  *
  */
 
-/** @file
- * @brief TFT Example Application main file.
- *
- * This file contains the source code for a sample application using the
- * GFX library based on the ILI9341 controller.
- *
- */
-
-#include "nrf_gfx.h"
-#include "nrf52_dk.h"
 #include "app_util_platform.h"
 #include "nrf_gpio.h"
 #include "nrf_delay.h"
 #include "boards.h"
 #include "app_error.h"
-#include <string.h>
-
-
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#include "nrf_drv_spi.h"
 
-#define GRAY            0xC618
-#define RED             0xF800
-#define BLUE            0x001F
+#undef ID130C_PIN_LCD_RST_N
+#define ID130C_PIN_LCD_RST_N 20
+#undef ID130C_PIN_LCD_CS_N
+#define ID130C_PIN_LCD_CS_N 23
+#undef ID130C_PIN_LCD_DC
+#define ID130C_PIN_LCD_DC 19
+#undef ID130C_PIN_LCD_CLK
+#define ID130C_PIN_LCD_CLK 24
+#undef ID130C_PIN_LCD_DATA
+#define ID130C_PIN_LCD_DATA 22
+#undef ID130C_PIN_LCD_BL_EN
+#define ID130C_PIN_LCD_BL_EN 12
 
-#define LINE_STEP       10
 
-#define CIRCLE_RADIUS   10
-#define CIRCLE_STEP     ((2 * CIRCLE_RADIUS) + 1)
+#define SPI_INSTANCE 0
+static const nrfx_spi_t spi_instance = NRFX_SPI_INSTANCE(SPI_INSTANCE);
 
-#define BORDER          2
+// Set of commands described in ST7735 data sheet.
+#define ST7735_NOP     0x00
+#define ST7735_SWRESET 0x01
+#define ST7735_RDDID   0x04
+#define ST7735_RDDST   0x09
 
-static const char * test_text = "nRF52 family";
+#define ST7735_SLPIN   0x10
+#define ST7735_SLPOUT  0x11
+#define ST7735_PTLON   0x12
+#define ST7735_NORON   0x13
 
-extern const nrf_gfx_font_desc_t orkney_24ptFontInfo;
-extern const nrf_lcd_t nrf_lcd_st7735;
+#define ST7735_INVOFF  0x20
+#define ST7735_INVON   0x21
+#define ST7735_DISPOFF 0x28
+#define ST7735_DISPON  0x29
+#define ST7735_CASET   0x2A
+#define ST7735_RASET   0x2B
+#define ST7735_RAMWR   0x2C
+#define ST7735_RAMRD   0x2E
 
-static const nrf_gfx_font_desc_t * p_font = &orkney_24ptFontInfo;
-static const nrf_lcd_t * p_lcd = &nrf_lcd_st7735;
+#define ST7735_PTLAR   0x30
+#define ST7735_COLMOD  0x3A
+#define ST7735_MADCTL  0x36
 
-static void gfx_initialization(void)
-{
-    APP_ERROR_CHECK(nrf_gfx_init(p_lcd));
-}
+#define ST7735_FRMCTR1 0xB1
+#define ST7735_FRMCTR2 0xB2
+#define ST7735_FRMCTR3 0xB3
+#define ST7735_INVCTR  0xB4
+#define ST7735_DISSET5 0xB6
 
-static void brackground_set(void)
-{
-    nrf_gfx_invert(p_lcd, true);
-    nrf_gfx_background_set(p_lcd, nrf52);
-    nrf_gfx_invert(p_lcd, false);
-}
+#define ST7735_PWCTR1  0xC0
+#define ST7735_PWCTR2  0xC1
+#define ST7735_PWCTR3  0xC2
+#define ST7735_PWCTR4  0xC3
+#define ST7735_PWCTR5  0xC4
+#define ST7735_VMCTR1  0xC5
 
-static void text_print(void)
-{
-    nrf_gfx_point_t text_start = NRF_GFX_POINT(5, nrf_gfx_height_get(p_lcd) - 50);
-    APP_ERROR_CHECK(nrf_gfx_print(p_lcd, &text_start, 0, test_text, p_font, true));
-}
+#define ST7735_RDID1   0xDA
+#define ST7735_RDID2   0xDB
+#define ST7735_RDID3   0xDC
+#define ST7735_RDID4   0xDD
 
-static void screen_clear(void)
-{
-    nrf_gfx_screen_fill(p_lcd, GRAY);
-}
+#define ST7735_PWCTR6  0xFC
 
-static void line_draw(void)
-{
-    nrf_gfx_line_t my_line = NRF_GFX_LINE(0, 0, 0, nrf_gfx_height_get(p_lcd), 2);
-    nrf_gfx_line_t my_line_2 = NRF_GFX_LINE(nrf_gfx_width_get(p_lcd), nrf_gfx_height_get(p_lcd), 0, nrf_gfx_height_get(p_lcd), 1);
+#define ST7735_GMCTRP1 0xE0
+#define ST7735_GMCTRN1 0xE1
 
-    for (uint16_t i = 0; i <= nrf_gfx_width_get(p_lcd); i += LINE_STEP)
-    {
-        my_line.x_end = i;
-        APP_ERROR_CHECK(nrf_gfx_line_draw(p_lcd, &my_line, RED));
-    }
+#define ST7735_MADCTL_MY  0x80
+#define ST7735_MADCTL_MX  0x40
+#define ST7735_MADCTL_MV  0x20
+#define ST7735_MADCTL_ML  0x10
+#define ST7735_MADCTL_RGB 0x00
+#define ST7735_MADCTL_BGR 0x08
+#define ST7735_MADCTL_MH  0x04
 
-    my_line.x_end = nrf_gfx_width_get(p_lcd);
+static const struct {
+  uint8_t data;
+  uint8_t dc;
+} sequence[] = {
+  {0xF0, 0},
+  {0x11, 1},
+  {0xF0, 0},
+  {0xCA, 1},
+  {0x78, 1},
+  {0x64, 1},
+  {0xB1, 0},
+  {0x05, 1},
+  {0x3C, 1},
+  {0x3C, 1},
+  {0xB2, 0},
+  {0x05, 1},
+  {0x3C, 1},
+  {0x3C, 1},
+  {0xB3, 0},
+  {0x05, 1},
+  {0x3C, 1},
+  {0x3C, 1},
+  {0x05, 1},
+  {0x3C, 1},
+  {0x3C, 1},
+  {0xB4, 0},
+  {0x03, 1},
+  {0xC0, 0},
+  {0xE0, 1},
+  {0x00, 1},
+  {0x07, 1},
+  {0xC1, 0},
+  {0xC5, 1},
+  {0xC2, 0},
+  {0x0A, 1},
+  {0x00, 1},
+  {0xC4, 0},
+  {0x8D, 1},
+  {0xEE, 1},
+  {0xC5, 0},
+  {0x03, 1},
+  {0xC7, 0},
+  {0x76, 1},
+  {0x36, 0},
+  {0xC8, 1},
+  {0x3A, 0},
+  {0x05, 1},
+  {0xE0, 0},
+  {0x27, 1},
+  {0x0E, 1},
+  {0x07, 1},
+  {0x04, 1},
+  {0x11, 1},
+  {0x0B, 1},
+  {0x06, 1},
+  {0x0C, 1},
+  {0x0E, 1},
+  {0x14, 1},
+  {0x1B, 1},
+  {0x3E, 1},
+  {0x06, 1},
+  {0x25, 1},
+  {0x07, 1},
+  {0x1F, 1},
+  {0xE1, 0},
+  {0x27, 0},
+  {0x0E, 1},
+  {0x07, 1},
+  {0x04, 1},
+  {0x11, 1},
+  {0x0B, 1},
+  {0x06, 1},
+  {0x0C, 1},
+  {0x0E, 1},
+  {0x14, 1},
+  {0x1B, 1},
+  {0x3E, 1},
+  {0x30, 1},
+  {0x25, 1},
+  {0x07, 1},
+  {0x1F, 1},
+};
 
-    for (uint16_t i = 0; i <= nrf_gfx_height_get(p_lcd); i += LINE_STEP)
-    {
-        my_line.y_end = (nrf_gfx_height_get(p_lcd) - i);
-        APP_ERROR_CHECK(nrf_gfx_line_draw(p_lcd, &my_line, RED));
-    }
+static void lcd_init(void) {
+  // setup spi
+  nrfx_spi_config_t spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+  spi_config.frequency = NRF_DRV_SPI_FREQ_125K;
+  spi_config.ss_pin   = NRFX_SPI_PIN_NOT_USED;
+  spi_config.miso_pin = NRFX_SPI_PIN_NOT_USED;
+  spi_config.mosi_pin = ID130C_PIN_LCD_DATA;
+  spi_config.sck_pin  = ID130C_PIN_LCD_CLK;
+  APP_ERROR_CHECK(nrfx_spi_init(&spi_instance, &spi_config, NULL, NULL));
+  
+  // backlight off
+  nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+  nrf_gpio_cfg_output(ID130C_PIN_LCD_BL_EN);
 
-    for (uint16_t i = 0; i <= nrf_gfx_height_get(p_lcd); i += LINE_STEP)
-    {
-        my_line_2.y_end = (nrf_gfx_height_get(p_lcd) - i);
-        APP_ERROR_CHECK(nrf_gfx_line_draw(p_lcd, &my_line_2, BLUE));
-    }
+  // pin defaults
+  nrf_gpio_pin_clear(ID130C_PIN_LCD_DC);
+  nrf_gpio_pin_clear(ID130C_PIN_LCD_RST_N);
+  nrf_gpio_pin_clear(ID130C_PIN_LCD_CS_N);
+  nrf_gpio_cfg_output(ID130C_PIN_LCD_RST_N);
+  nrf_gpio_cfg_output(ID130C_PIN_LCD_DC);
+  nrf_gpio_cfg_output(ID130C_PIN_LCD_CS_N);
 
-    my_line_2.y_end = 0;
+  // power on
+  nrf_gpio_pin_clear(ID130C_PIN_LCD_PWR_N);
+  nrf_gpio_cfg_output(ID130C_PIN_LCD_PWR_N);
 
-    for (uint16_t i = 0; i <= nrf_gfx_width_get(p_lcd); i += LINE_STEP)
-    {
-        my_line_2.x_end = i;
-        APP_ERROR_CHECK(nrf_gfx_line_draw(p_lcd, &my_line_2, BLUE));
-    }
-}
+  // reset
+  nrf_gpio_pin_set(ID130C_PIN_LCD_RST_N);
+  nrf_delay_ms(5);
+  nrf_gpio_pin_clear(ID130C_PIN_LCD_RST_N);
+  nrf_delay_ms(5);
+  nrf_gpio_pin_set(ID130C_PIN_LCD_RST_N);
 
-static void circle_draw(void)
-{
-    nrf_gfx_circle_t my_circle = NRF_GFX_CIRCLE(0, 0, CIRCLE_RADIUS);
+  // pause
+  nrf_delay_ms(140);
 
-    for (uint16_t j = 0; j <= nrf_gfx_height_get(p_lcd); j += CIRCLE_STEP)
-    {
-        my_circle.y = j;
-        for (uint16_t i = 0; i <= nrf_gfx_width_get(p_lcd); i += CIRCLE_STEP)
-        {
-            my_circle.x = i;
-            APP_ERROR_CHECK(nrf_gfx_circle_draw(p_lcd, &my_circle, BLUE, true));
-        }
-    }
+  // ST7735_SLPOUT
+  {
+    const uint8_t buffer[] = { ST7735_SLPOUT };
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = buffer,
+      .tx_length   = sizeof(buffer),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+  }
 
-    for (uint16_t j = CIRCLE_RADIUS; j <= nrf_gfx_height_get(p_lcd) + CIRCLE_RADIUS; j += CIRCLE_STEP)
-    {
-        my_circle.y = j;
-        for (uint16_t i = CIRCLE_RADIUS; i <= nrf_gfx_width_get(p_lcd) + CIRCLE_RADIUS; i += CIRCLE_STEP)
-        {
-            my_circle.x = i;
-            APP_ERROR_CHECK(nrf_gfx_circle_draw(p_lcd, &my_circle, RED, false));
-        }
-    }
-}
+  // pause
+  nrf_delay_ms(120);
 
-static void rect_draw(void)
-{
-    nrf_gfx_rect_t my_rect = NRF_GFX_RECT(nrf_gfx_width_get(p_lcd) / 2,
-                             nrf_gfx_height_get(p_lcd) / nrf_gfx_width_get(p_lcd),
-                             nrf_gfx_height_get(p_lcd),
-                             BORDER);
-    nrf_gfx_rect_t my_rect_fill = NRF_GFX_RECT(nrf_gfx_width_get(p_lcd) / 2,
-                                  nrf_gfx_height_get(p_lcd) / nrf_gfx_width_get(p_lcd),
-                                  nrf_gfx_height_get(p_lcd),
-                                  BORDER);
+  for (unsigned idx=0; idx < sizeof(sequence)/sizeof(sequence[0]); ++idx) {
+      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence[idx].dc);
+      uint8_t buffer[] = { sequence[idx].data  };
+      nrfx_spi_xfer_desc_t spi_xfer_desc = {
+	.p_tx_buffer = buffer,
+	.tx_length   = sizeof(buffer),
+	.p_rx_buffer = NULL,
+	.rx_length   = 0
+      };
+      NRF_LOG_INFO("%d: %08x %d", idx, sequence[idx].data, sequence[idx].dc);
+      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+  }
 
-    nrf_gfx_rotation_set(p_lcd, NRF_LCD_ROTATE_90);
-
-    for (uint16_t i = 0, j = 0;
-        i <= (nrf_gfx_width_get(p_lcd) - (2 * BORDER)) / 2 &&
-        j <= (nrf_gfx_height_get(p_lcd) - (2 * BORDER)) / 2;
-        i += 6, j += 8)
-    {
-        my_rect.x = i;
-        my_rect.y = j;
-        my_rect_fill.x = i + BORDER;
-        my_rect_fill.y = j + BORDER;
-        my_rect.width = nrf_gfx_width_get(p_lcd) - i * 2;
-        my_rect.height = nrf_gfx_height_get(p_lcd) - j * 2;
-        my_rect_fill.width = nrf_gfx_width_get(p_lcd) - i * 2 - (2 * BORDER);
-        my_rect_fill.height = nrf_gfx_height_get(p_lcd) - j * 2 - (2 * BORDER);
-
-        // Draw using pseudo-random colors.
-        APP_ERROR_CHECK(nrf_gfx_rect_draw(p_lcd, &my_rect, 2, ((i + j) * 10), false));
-        APP_ERROR_CHECK(nrf_gfx_rect_draw(p_lcd, &my_rect_fill, 2, (UINT16_MAX - (i + j) * 10), true));
-    }
-
-    nrf_gfx_rotation_set(p_lcd, NRF_LCD_ROTATE_0);
 
 }
 
@@ -203,39 +276,13 @@ int main(void)
     APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
-    NRF_LOG_INFO("GFX usage example application started.")
+    NRF_LOG_INFO("Demo application started.")
     NRF_LOG_FLUSH();
 
-    nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-    nrf_gpio_pin_clear(ID130C_PIN_LCD_RST);
-    nrf_gpio_pin_set(ID130C_PIN_LCD_PWR_N);
-    nrf_gpio_cfg_output(ID130C_PIN_LCD_BL_EN);
-    nrf_gpio_cfg_output(ID130C_PIN_LCD_RST);
-    nrf_gpio_cfg_output(ID130C_PIN_LCD_PWR_N);
-
-    // power on display and reset
-    nrf_gpio_pin_set(ID130C_PIN_LCD_RST);
-    nrf_gpio_pin_clear(ID130C_PIN_LCD_PWR_N);
-    nrf_gpio_pin_clear(ID130C_PIN_LCD_RST);
-
-    // backlight on
-    nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-    
-    gfx_initialization();
+    lcd_init();
 
     while (1)
     {
-       brackground_set();
-       text_print();
-       nrf_delay_ms(1000);
-       screen_clear();
-       line_draw();
-       nrf_delay_ms(1000);
-       screen_clear();
-       circle_draw();
-       nrf_delay_ms(1000);
-       screen_clear();
-       rect_draw();
        nrf_delay_ms(1000);
     }
 }
