@@ -58,9 +58,11 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-#define PIN0 ID130C_PIN_HR_SCL
-#define PIN1 ID130C_PIN_HR_SDA
-#define PIN2 ID130C_PIN_HR_INT
+#define PIN0 19
+#define PIN1 20
+#define PIN2 22
+#define PIN3 23
+#define PIN4 24
 
 
 int main(void)
@@ -71,19 +73,23 @@ int main(void)
     NRF_LOG_INFO("blink application started.");
     NRF_LOG_FLUSH();
 
-    nrf_gpio_cfg_output(28);
+    nrf_gpio_cfg_output(PIN0);
     nrf_gpio_cfg_output(PIN1);
     nrf_gpio_cfg_output(PIN2);
+    nrf_gpio_cfg_output(PIN3);
+    nrf_gpio_cfg_output(PIN4);
 
     unsigned counter = 0;
     while (1)
       {
-	nrf_gpio_pin_write(28, counter & 1);
-	//nrf_gpio_pin_write(PIN1, counter & 2);
-	// nrf_gpio_pin_write(PIN2, counter & 4);
+	nrf_gpio_pin_write(PIN0, counter & 1);
+	nrf_gpio_pin_write(PIN1, counter & 2);
+	nrf_gpio_pin_write(PIN2, counter & 4);
+	nrf_gpio_pin_write(PIN3, counter & 8);
+	nrf_gpio_pin_write(PIN4, counter & 16);
 	NRF_LOG_INFO("counter %x", counter);
 	NRF_LOG_FLUSH();
-	nrf_delay_ms(100);
+	nrf_delay_ms(50);
 	counter++;
       }
 }
