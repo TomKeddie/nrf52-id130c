@@ -49,7 +49,10 @@
 
 #include "nrf_drv_spi.h"
 
+#include "crowd-supply-icon.c"
+
 #if 1
+// PCA10040 pin definitions
 #undef ID130C_PIN_LCD_RST_N
 #define ID130C_PIN_LCD_RST_N 20
 #undef ID130C_PIN_LCD_CS_N
@@ -240,10 +243,51 @@ static const struct {
   {0x9F, 1},  // 159
 };
 
+static void fill_screen(uint16_t colour) {
+  for (unsigned idx=0; idx < sizeof(sequence1)/sizeof(sequence1[0]); ++idx) {
+      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence1[idx].dc);
+      uint8_t buffer[] = { sequence1[idx].data  };
+      nrfx_spi_xfer_desc_t spi_xfer_desc = {
+	.p_tx_buffer = buffer,
+	.tx_length   = sizeof(buffer),
+	.p_rx_buffer = NULL,
+	.rx_length   = 0
+      };
+      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+  }
+  {
+    const uint8_t buffer[] = { ST7735_RAMWR };
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = buffer,
+      .tx_length   = sizeof(buffer),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 0);
+    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 1);
+  }
+  {
+    uint16_t fill[ID130C_PIXELS_X];
+    for (unsigned ix=0; ix < sizeof(fill)/sizeof(fill[0]); ++ix) {
+      fill[ix] = colour;
+    }
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = (uint8_t*) fill,
+      .tx_length   = sizeof(fill),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    for (unsigned idx=0; idx < ID130C_PIXELS_Y; ++idx) {
+      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    }
+  }
+}
+
 static void lcd_init(void) {
   // setup spi
   nrfx_spi_config_t spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
-  spi_config.frequency = NRF_DRV_SPI_FREQ_125K;
+  spi_config.frequency = NRF_DRV_SPI_FREQ_8M;
   spi_config.ss_pin   = NRFX_SPI_PIN_NOT_USED;
   spi_config.miso_pin = NRFX_SPI_PIN_NOT_USED;
   spi_config.mosi_pin = ID130C_PIN_LCD_DATA;
@@ -335,34 +379,6 @@ static void lcd_init(void) {
 
   // pause
   nrf_delay_ms(120);
-  
-  // Fill screen with white
-  {
-    const uint8_t buffer[] = { ST7735_RAMWR };
-    nrfx_spi_xfer_desc_t spi_xfer_desc = {
-      .p_tx_buffer = buffer,
-      .tx_length   = sizeof(buffer),
-      .p_rx_buffer = NULL,
-      .rx_length   = 0
-    };
-    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 0);
-    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
-    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 1);
-  }
-  {
-    uint16_t white[ID130C_PIXELS_X];
-    memset(white, 0xff, sizeof(white));
-    nrfx_spi_xfer_desc_t spi_xfer_desc = {
-      .p_tx_buffer = (uint8_t*) white,
-      .tx_length   = sizeof(white),
-      .p_rx_buffer = NULL,
-      .rx_length   = 0
-    };
-    for (unsigned idx=0; idx < ID130C_PIXELS_Y; ++idx) {
-      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
-    }
-  }
-  nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
 }
 
 int main(void)
@@ -377,7 +393,16 @@ int main(void)
 
     while (1)
     {
-       nrf_delay_ms(1000);
+      // Fill screen with white
+      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+      fill_screen(0xffff);
+      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
+      nrf_delay_ms(1000);
+      // Fill screen with black
+      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+      fill_screen(0);
+      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
+      nrf_delay_ms(1000);
     }
 }
 
