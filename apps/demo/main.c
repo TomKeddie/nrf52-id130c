@@ -49,6 +49,7 @@
 
 #include "nrf_drv_spi.h"
 
+#if 1
 #undef ID130C_PIN_LCD_RST_N
 #define ID130C_PIN_LCD_RST_N 20
 #undef ID130C_PIN_LCD_CS_N
@@ -61,7 +62,10 @@
 #define ID130C_PIN_LCD_DATA 22
 #undef ID130C_PIN_LCD_BL_EN
 #define ID130C_PIN_LCD_BL_EN 12
+#endif
 
+#define ID130C_PIXELS_X 80
+#define ID130C_PIXELS_Y 160
 
 #define SPI_INSTANCE 0
 static const nrfx_spi_t spi_instance = NRFX_SPI_INSTANCE(SPI_INSTANCE);
@@ -102,6 +106,7 @@ static const nrfx_spi_t spi_instance = NRFX_SPI_INSTANCE(SPI_INSTANCE);
 #define ST7735_PWCTR4  0xC3
 #define ST7735_PWCTR5  0xC4
 #define ST7735_VMCTR1  0xC5
+#define ST7735_VMOFCTR 0xC7
 
 #define ST7735_RDID1   0xDA
 #define ST7735_RDID2   0xDB
@@ -124,51 +129,51 @@ static const nrfx_spi_t spi_instance = NRFX_SPI_INSTANCE(SPI_INSTANCE);
 static const struct {
   uint8_t data;
   uint8_t dc;
-} sequence[] = {
+} sequence0[] = {
   {0xF0, 0},
   {0x11, 1},
   {0xF0, 0},
   {0xCA, 1},
   {0x78, 1},
   {0x64, 1},
-  {0xB1, 0},
+  {ST7735_FRMCTR1, 0},
   {0x05, 1},
   {0x3C, 1},
   {0x3C, 1},
-  {0xB2, 0},
+  {ST7735_FRMCTR2, 0},
   {0x05, 1},
   {0x3C, 1},
   {0x3C, 1},
-  {0xB3, 0},
+  {ST7735_FRMCTR3, 0},
   {0x05, 1},
   {0x3C, 1},
   {0x3C, 1},
   {0x05, 1},
   {0x3C, 1},
   {0x3C, 1},
-  {0xB4, 0},
+  {ST7735_INVCTR, 0},
   {0x03, 1},
-  {0xC0, 0},
+  {ST7735_PWCTR1, 0},
   {0xE0, 1},
   {0x00, 1},
   {0x07, 1},
-  {0xC1, 0},
+  {ST7735_PWCTR2, 0},
   {0xC5, 1},
-  {0xC2, 0},
+  {ST7735_PWCTR3, 0},
   {0x0A, 1},
   {0x00, 1},
-  {0xC4, 0},
+  {ST7735_PWCTR5, 0},
   {0x8D, 1},
   {0xEE, 1},
-  {0xC5, 0},
+  {ST7735_VMCTR1, 0},
   {0x03, 1},
-  {0xC7, 0},
+  {ST7735_VMOFCTR, 0},
   {0x76, 1},
-  {0x36, 0},
+  {ST7735_MADCTL, 0},
   {0xC8, 1},
-  {0x3A, 0},
+  {ST7735_COLMOD, 0},
   {0x05, 1},
-  {0xE0, 0},
+  {ST7735_GMCTRP1, 0},
   {0x27, 1},
   {0x0E, 1},
   {0x07, 1},
@@ -185,8 +190,8 @@ static const struct {
   {0x25, 1},
   {0x07, 1},
   {0x1F, 1},
-  {0xE1, 0},
-  {0x27, 0},
+  {ST7735_GMCTRN1, 0},
+  {0x27, 1},
   {0x0E, 1},
   {0x07, 1},
   {0x04, 1},
@@ -202,6 +207,37 @@ static const struct {
   {0x25, 1},
   {0x07, 1},
   {0x1F, 1},
+  {ST7735_NORON, 0},
+};
+
+static const struct {
+  uint8_t data;
+  uint8_t dc;
+} sequence1[] = {
+  // 103 - 24 + 1 = 80 columns
+  {ST7735_CASET, 0},
+  {0x00, 1},
+  {0x18, 1},  // 24
+  {0x00, 1},
+  {0x67, 1},  // 103
+  // 159 - 0 + 1 = 160
+  {ST7735_RASET, 0},
+  {0x00, 1},
+  {0x00, 1},  // 0
+  {0x00, 1},
+  {0x9F, 1},  // 159
+  // 103 - 24 + 1 = 80 columns
+  {ST7735_CASET, 0},
+  {0x00, 1},
+  {0x18, 1},  // 24
+  {0x00, 1},
+  {0x67, 1},  // 103
+  // 159 - 0 + 1 = 160
+  {ST7735_RASET, 0},
+  {0x00, 1},
+  {0x00, 1},  // 0
+  {0x00, 1},
+  {0x9F, 1},  // 159
 };
 
 static void lcd_init(void) {
@@ -237,10 +273,8 @@ static void lcd_init(void) {
   nrf_delay_ms(5);
   nrf_gpio_pin_set(ID130C_PIN_LCD_RST_N);
 
-  // pause
+  // pause then SLPOUT
   nrf_delay_ms(140);
-
-  // ST7735_SLPOUT
   {
     const uint8_t buffer[] = { ST7735_SLPOUT };
     nrfx_spi_xfer_desc_t spi_xfer_desc = {
@@ -255,20 +289,80 @@ static void lcd_init(void) {
   // pause
   nrf_delay_ms(120);
 
-  for (unsigned idx=0; idx < sizeof(sequence)/sizeof(sequence[0]); ++idx) {
-      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence[idx].dc);
-      uint8_t buffer[] = { sequence[idx].data  };
+  // sequence 0
+  for (unsigned idx=0; idx < sizeof(sequence0)/sizeof(sequence0[0]); ++idx) {
+      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence0[idx].dc);
+      uint8_t buffer[] = { sequence0[idx].data  };
       nrfx_spi_xfer_desc_t spi_xfer_desc = {
 	.p_tx_buffer = buffer,
 	.tx_length   = sizeof(buffer),
 	.p_rx_buffer = NULL,
 	.rx_length   = 0
       };
-      NRF_LOG_INFO("%d: %08x %d", idx, sequence[idx].data, sequence[idx].dc);
+      NRF_LOG_INFO("%d: %08x %d", idx, sequence0[idx].data, sequence0[idx].dc);
       nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
   }
 
+  // pause and turn on
+  nrf_delay_ms(10);
+  {
+    const uint8_t buffer[] = { ST7735_DISPON };
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = buffer,
+      .tx_length   = sizeof(buffer),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+  }
 
+  // pause
+  nrf_delay_ms(120);
+
+  // sequence 1
+  for (unsigned idx=0; idx < sizeof(sequence1)/sizeof(sequence1[0]); ++idx) {
+      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence1[idx].dc);
+      uint8_t buffer[] = { sequence1[idx].data  };
+      nrfx_spi_xfer_desc_t spi_xfer_desc = {
+	.p_tx_buffer = buffer,
+	.tx_length   = sizeof(buffer),
+	.p_rx_buffer = NULL,
+	.rx_length   = 0
+      };
+      NRF_LOG_INFO("%d: %08x %d", idx, sequence1[idx].data, sequence1[idx].dc);
+      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+  }
+
+  // pause
+  nrf_delay_ms(120);
+  
+  // Fill screen with white
+  {
+    const uint8_t buffer[] = { ST7735_RAMWR };
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = buffer,
+      .tx_length   = sizeof(buffer),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 0);
+    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 1);
+  }
+  {
+    uint16_t white[ID130C_PIXELS_X];
+    memset(white, 0xff, sizeof(white));
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = (uint8_t*) white,
+      .tx_length   = sizeof(white),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    for (unsigned idx=0; idx < ID130C_PIXELS_Y; ++idx) {
+      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    }
+  }
+  nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
 }
 
 int main(void)
