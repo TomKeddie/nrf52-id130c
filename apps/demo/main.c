@@ -41,7 +41,6 @@
 #include "app_util_platform.h"
 #include "nrf_gpio.h"
 #include "nrf_delay.h"
-#include "boards.h"
 #include "app_error.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -299,6 +298,12 @@ static void fill_logo(void) {
   }
 }
 
+static void fill_info(void) {
+#if 0  
+  uint32_t mac = NRF_FICR->DEVICEADDR[0];
+#endif
+}
+
 static void lcd_init(void) {
   // setup spi
   nrfx_spi_config_t spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
@@ -375,6 +380,9 @@ static void lcd_init(void) {
   // pause
   nrf_delay_ms(120);
 }
+void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info) {
+  while (1);
+}
 
 int main(void)
 {
@@ -391,6 +399,7 @@ int main(void)
     fill_screen(0xffff);
     // Fill top of screen with logo
     fill_logo();
+    fill_info();
     nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
     
     while (1) {
