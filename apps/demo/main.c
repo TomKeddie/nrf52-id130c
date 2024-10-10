@@ -129,10 +129,13 @@ static const nrfx_spi_t spi_instance = NRFX_SPI_INSTANCE(SPI_INSTANCE);
 #define ST7735_MADCTL_BGR 0x08
 #define ST7735_MADCTL_MH  0x04
 
+// This sequence was reverse engineered from a working band.  Some of
+// the commands arent in the data sheet but they've been left here for
+// now.
 static const struct {
   uint8_t data;
   uint8_t dc;
-} sequence0[] = {
+} init_sequence[] = {
   {0xF0, 0},
   {0x11, 1},
   {0xF0, 0},
@@ -216,7 +219,7 @@ static const struct {
 static const struct {
   uint8_t data;
   uint8_t dc;
-} sequence1[] = {
+} sequence_ramwr[] = {
   // 103 - 24 + 1 = 80 columns
   {ST7735_CASET, 0},
   {0x00, 1},
@@ -229,24 +232,13 @@ static const struct {
   {0x00, 1},  // 0
   {0x00, 1},
   {0x9F, 1},  // 159
-  // 103 - 24 + 1 = 80 columns
-  {ST7735_CASET, 0},
-  {0x00, 1},
-  {0x18, 1},  // 24
-  {0x00, 1},
-  {0x67, 1},  // 103
-  // 159 - 0 + 1 = 160
-  {ST7735_RASET, 0},
-  {0x00, 1},
-  {0x00, 1},  // 0
-  {0x00, 1},
-  {0x9F, 1},  // 159
+  {ST7735_RAMWR, 0},
 };
 
 static void fill_screen(uint16_t colour) {
-  for (unsigned idx=0; idx < sizeof(sequence1)/sizeof(sequence1[0]); ++idx) {
-      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence1[idx].dc);
-      uint8_t buffer[] = { sequence1[idx].data  };
+  for (unsigned idx=0; idx < sizeof(sequence_ramwr)/sizeof(sequence_ramwr[0]); ++idx) {
+      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence_ramwr[idx].dc);
+      uint8_t buffer[] = { sequence_ramwr[idx].data  };
       nrfx_spi_xfer_desc_t spi_xfer_desc = {
 	.p_tx_buffer = buffer,
 	.tx_length   = sizeof(buffer),
@@ -254,18 +246,6 @@ static void fill_screen(uint16_t colour) {
 	.rx_length   = 0
       };
       nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
-  }
-  {
-    const uint8_t buffer[] = { ST7735_RAMWR };
-    nrfx_spi_xfer_desc_t spi_xfer_desc = {
-      .p_tx_buffer = buffer,
-      .tx_length   = sizeof(buffer),
-      .p_rx_buffer = NULL,
-      .rx_length   = 0
-    };
-    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 0);
-    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
-    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 1);
   }
   {
     uint16_t fill[ID130C_PIXELS_X];
@@ -285,9 +265,9 @@ static void fill_screen(uint16_t colour) {
 }
 
 static void fill_logo(void) {
-  for (unsigned idx=0; idx < sizeof(sequence1)/sizeof(sequence1[0]); ++idx) {
-      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence1[idx].dc);
-      uint8_t buffer[] = { sequence1[idx].data  };
+  for (unsigned idx=0; idx < sizeof(sequence_ramwr)/sizeof(sequence_ramwr[0]); ++idx) {
+      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence_ramwr[idx].dc);
+      uint8_t buffer[] = { sequence_ramwr[idx].data  };
       nrfx_spi_xfer_desc_t spi_xfer_desc = {
 	.p_tx_buffer = buffer,
 	.tx_length   = sizeof(buffer),
@@ -365,20 +345,17 @@ static void lcd_init(void) {
     nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
   }
 
-  // pause
+  // pause then init sequence
   nrf_delay_ms(120);
-
-  // sequence 0
-  for (unsigned idx=0; idx < sizeof(sequence0)/sizeof(sequence0[0]); ++idx) {
-      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence0[idx].dc);
-      uint8_t buffer[] = { sequence0[idx].data  };
+  for (unsigned idx=0; idx < sizeof(init_sequence)/sizeof(init_sequence[0]); ++idx) {
+      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, init_sequence[idx].dc);
+      uint8_t buffer[] = { init_sequence[idx].data  };
       nrfx_spi_xfer_desc_t spi_xfer_desc = {
 	.p_tx_buffer = buffer,
 	.tx_length   = sizeof(buffer),
 	.p_rx_buffer = NULL,
 	.rx_length   = 0
       };
-      NRF_LOG_INFO("%d: %08x %d", idx, sequence0[idx].data, sequence0[idx].dc);
       nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
   }
 
@@ -397,23 +374,6 @@ static void lcd_init(void) {
 
   // pause
   nrf_delay_ms(120);
-
-  // sequence 1
-  for (unsigned idx=0; idx < sizeof(sequence1)/sizeof(sequence1[0]); ++idx) {
-     nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence1[idx].dc);
-      uint8_t buffer[] = { sequence1[idx].data  };
-      nrfx_spi_xfer_desc_t spi_xfer_desc = {
-	.p_tx_buffer = buffer,
-	.tx_length   = sizeof(buffer),
-	.p_rx_buffer = NULL,
-	.rx_length   = 0
-      };
-      NRF_LOG_INFO("%d: %08x %d", idx, sequence1[idx].data, sequence1[idx].dc);
-      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
-  }
-
-  // pause
-  nrf_delay_ms(120);
 }
 
 int main(void)
@@ -426,27 +386,14 @@ int main(void)
 
     lcd_init();
 
-    while (1)
-    {
-      // Fill screen
-      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-      fill_screen(0xf800);
-      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-      nrf_delay_ms(1000);
-      // Fill screen
-      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-      fill_screen(0x07e0);
-      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-      nrf_delay_ms(1000);
-      // Fill screen
-      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-      fill_screen(0x001f);
-      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-      nrf_delay_ms(1000);
-      // Fill screen with logo
-      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-      fill_logo();
-      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
+    nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+    // white screen
+    fill_screen(0xffff);
+    // Fill top of screen with logo
+    fill_logo();
+    nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
+    
+    while (1) {
       nrf_delay_ms(1000);
     }
 }
