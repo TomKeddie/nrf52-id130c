@@ -1,3 +1,5 @@
+# converts a PNG to an RBG565 for display on ID130C band
+# must be resized to 80 colums beforehand
 import png
 import sys
 

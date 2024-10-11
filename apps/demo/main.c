@@ -62,8 +62,6 @@
 #define ID130C_PIN_LCD_CLK 24
 #undef ID130C_PIN_LCD_DATA
 #define ID130C_PIN_LCD_DATA 22
-#undef ID130C_PIN_LCD_BL_EN
-#define ID130C_PIN_LCD_BL_EN 12
 #endif
 
 #define ID130C_PIXELS_X 80
@@ -231,7 +229,6 @@ static const struct {
   {0x00, 1},  // 0
   {0x00, 1},
   {0x9F, 1},  // 159
-  {ST7735_RAMWR, 0},
 };
 
 static void fill_screen(uint16_t colour) {
@@ -245,6 +242,18 @@ static void fill_screen(uint16_t colour) {
 	.rx_length   = 0
       };
       nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+  }
+  {
+    const uint8_t buffer[] = { ST7735_RAMWR };
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = buffer,
+      .tx_length   = sizeof(buffer),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 0);
+    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 1);
   }
   {
     uint16_t fill[ID130C_PIXELS_X];
@@ -380,8 +389,9 @@ static void lcd_init(void) {
   // pause
   nrf_delay_ms(120);
 }
+
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info) {
-  while (1);
+  while(1);
 }
 
 int main(void)
@@ -394,15 +404,33 @@ int main(void)
 
     lcd_init();
 
-    nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-    // white screen
-    fill_screen(0xffff);
-    // Fill top of screen with logo
-    fill_logo();
-    fill_info();
-    nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-    
-    while (1) {
+    while (1)
+    {
+      // Fill screen with blue
+      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+      fill_screen(0xf800);
+      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
+      nrf_delay_ms(1000);
+      // Fill screen with red
+      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+      fill_screen(0x07e0);
+      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
+      nrf_delay_ms(1000);
+      // Fill screen with green
+      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+      fill_screen(0x001f);
+      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
+      nrf_delay_ms(1000);
+      // Fill screen with white
+      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+      fill_screen(0xffff);
+      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
+      nrf_delay_ms(1000);
+      // Fill screen with logo
+      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
+      fill_logo();
+      fill_info();
+      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
       nrf_delay_ms(1000);
     }
 }
