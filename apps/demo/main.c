@@ -45,6 +45,7 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 #include "nrfx_gpiote.h"
+#include "nrfx_timer.h"
 
 #include "nrf_drv_spi.h"
 
@@ -73,8 +74,13 @@
 #define ID130C_PIXELS_X 80
 #define ID130C_PIXELS_Y 160
 
-#define SPI_INSTANCE 0
-static const nrfx_spi_t spi_instance = NRFX_SPI_INSTANCE(SPI_INSTANCE);
+#define BACKLIGHT_TIMER_DURATION_MS 5000
+
+#define LCD_SPI_INSTANCE 0
+#define BACKLIGHT_TIMER_INSTANCE 0
+static const nrfx_spi_t lcd_spi_instance = NRFX_SPI_INSTANCE(LCD_SPI_INSTANCE);
+static const nrfx_timer_t backlight_timer_instance = NRFX_TIMER_INSTANCE(BACKLIGHT_TIMER_INSTANCE);
+
 
 // Set of commands described in ST7735 data sheet.
 #define ST7735_NOP     0x00
@@ -240,15 +246,15 @@ static const struct {
 
 static void fill_screen(uint16_t colour) {
   for (unsigned idx=0; idx < sizeof(sequence_ramwr)/sizeof(sequence_ramwr[0]); ++idx) {
-      if (sequence_ramwr[idx].dc) nrfx_gpiote_out_set(ID130C_PIN_LCD_DC); else  nrfx_gpiote_out_clear(ID130C_PIN_LCD_DC);
-      uint8_t buffer[] = { sequence_ramwr[idx].data  };
-      nrfx_spi_xfer_desc_t spi_xfer_desc = {
-	.p_tx_buffer = buffer,
-	.tx_length   = sizeof(buffer),
-	.p_rx_buffer = NULL,
-	.rx_length   = 0
-      };
-      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    if (sequence_ramwr[idx].dc) nrfx_gpiote_out_set(ID130C_PIN_LCD_DC); else  nrfx_gpiote_out_clear(ID130C_PIN_LCD_DC);
+    uint8_t buffer[] = { sequence_ramwr[idx].data  };
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = buffer,
+      .tx_length   = sizeof(buffer),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    nrfx_spi_xfer(&lcd_spi_instance, &spi_xfer_desc, 0);
   }
   nrfx_gpiote_out_set(ID130C_PIN_LCD_DC);
   {
@@ -263,22 +269,22 @@ static void fill_screen(uint16_t colour) {
       .rx_length   = 0
     };
     for (unsigned idx=0; idx < ID130C_PIXELS_Y; ++idx) {
-      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+      nrfx_spi_xfer(&lcd_spi_instance, &spi_xfer_desc, 0);
     }
   }
 }
 
 static void fill_logo(void) {
   for (unsigned idx=0; idx < sizeof(sequence_ramwr)/sizeof(sequence_ramwr[0]); ++idx) {
-      if (sequence_ramwr[idx].dc) nrfx_gpiote_out_set(ID130C_PIN_LCD_DC); else  nrfx_gpiote_out_clear(ID130C_PIN_LCD_DC);
-      uint8_t buffer[] = { sequence_ramwr[idx].data  };
-      nrfx_spi_xfer_desc_t spi_xfer_desc = {
-	.p_tx_buffer = buffer,
-	.tx_length   = sizeof(buffer),
-	.p_rx_buffer = NULL,
-	.rx_length   = 0
-      };
-      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    if (sequence_ramwr[idx].dc) nrfx_gpiote_out_set(ID130C_PIN_LCD_DC); else  nrfx_gpiote_out_clear(ID130C_PIN_LCD_DC);
+    uint8_t buffer[] = { sequence_ramwr[idx].data  };
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = buffer,
+      .tx_length   = sizeof(buffer),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    nrfx_spi_xfer(&lcd_spi_instance, &spi_xfer_desc, 0);
   }
   nrfx_gpiote_out_set(ID130C_PIN_LCD_DC);
   {
@@ -288,7 +294,7 @@ static void fill_logo(void) {
       .p_rx_buffer = NULL,
       .rx_length   = 0
     };
-    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    nrfx_spi_xfer(&lcd_spi_instance, &spi_xfer_desc, 0);
   }
 }
 
@@ -306,7 +312,7 @@ static void lcd_init(void) {
   spi_config.miso_pin = NRFX_SPI_PIN_NOT_USED;
   spi_config.mosi_pin = ID130C_PIN_LCD_DATA;
   spi_config.sck_pin  = ID130C_PIN_LCD_CLK;
-  APP_ERROR_CHECK(nrfx_spi_init(&spi_instance, &spi_config, NULL, NULL));
+  APP_ERROR_CHECK(nrfx_spi_init(&lcd_spi_instance, &spi_config, NULL, NULL));
 
   nrfx_gpiote_out_config_t out_config = NRFX_GPIOTE_CONFIG_OUT_SIMPLE(false);
 
@@ -342,21 +348,21 @@ static void lcd_init(void) {
       .p_rx_buffer = NULL,
       .rx_length   = 0
     };
-    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    nrfx_spi_xfer(&lcd_spi_instance, &spi_xfer_desc, 0);
   }
 
   // pause then init sequence
   nrf_delay_ms(120);
   for (unsigned idx=0; idx < sizeof(init_sequence)/sizeof(init_sequence[0]); ++idx) {
     if (init_sequence[idx].dc) nrfx_gpiote_out_set(ID130C_PIN_LCD_DC); else  nrfx_gpiote_out_clear(ID130C_PIN_LCD_DC);
-      uint8_t buffer[] = { init_sequence[idx].data  };
-      nrfx_spi_xfer_desc_t spi_xfer_desc = {
-	.p_tx_buffer = buffer,
-	.tx_length   = sizeof(buffer),
-	.p_rx_buffer = NULL,
-	.rx_length   = 0
-      };
-      nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    uint8_t buffer[] = { init_sequence[idx].data  };
+    nrfx_spi_xfer_desc_t spi_xfer_desc = {
+      .p_tx_buffer = buffer,
+      .tx_length   = sizeof(buffer),
+      .p_rx_buffer = NULL,
+      .rx_length   = 0
+    };
+    nrfx_spi_xfer(&lcd_spi_instance, &spi_xfer_desc, 0);
   }
 
   // pause and turn on
@@ -369,7 +375,7 @@ static void lcd_init(void) {
       .p_rx_buffer = NULL,
       .rx_length   = 0
     };
-    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
+    nrfx_spi_xfer(&lcd_spi_instance, &spi_xfer_desc, 0);
   }
 
   // pause
@@ -379,10 +385,18 @@ static void lcd_init(void) {
 void pin_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
   switch(pin) {
   case ID130C_PIN_TOUCH_INT_N :
-    nrfx_gpiote_out_toggle(ID130C_PIN_LCD_BL_EN);
+    nrfx_gpiote_out_clear(ID130C_PIN_LCD_BL_EN);
+    nrfx_timer_enable(&backlight_timer_instance);
     break;
   default:
     break;
+  }
+}
+
+void timer_handler(nrf_timer_event_t event_type, void* p_context) {
+  uint32_t timer = (uint32_t) p_context;
+  if (timer == BACKLIGHT_TIMER_INSTANCE && event_type == NRF_TIMER_EVENT_COMPARE0) {
+    nrfx_gpiote_out_set(ID130C_PIN_LCD_BL_EN);
   }
 }
 
@@ -398,9 +412,19 @@ int main(void)
   NRF_LOG_INFO("Demo application started.");
   NRF_LOG_FLUSH();
 
- // misc init
+  // misc init
   APP_ERROR_CHECK(nrfx_gpiote_init());
 
+  // backlight timer
+  nrfx_timer_config_t backlight_timer_cfg = {.frequency=NRF_TIMER_FREQ_31250Hz,
+					     .mode=NRF_TIMER_MODE_TIMER,
+					     .bit_width=NRF_TIMER_BIT_WIDTH_32,
+					     .interrupt_priority=NRFX_TIMER_DEFAULT_CONFIG_IRQ_PRIORITY,
+					     .p_context=BACKLIGHT_TIMER_INSTANCE};
+  APP_ERROR_CHECK(nrfx_timer_init(&backlight_timer_instance, &backlight_timer_cfg, timer_handler));
+  uint32_t time_ticks = nrfx_timer_ms_to_ticks(&backlight_timer_instance, BACKLIGHT_TIMER_DURATION_MS);
+  nrfx_timer_extended_compare(&backlight_timer_instance, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK | NRF_TIMER_SHORT_COMPARE0_STOP_MASK, true);
+ 
   // touch init
   nrfx_gpiote_in_config_t in_config_hitolo = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
   in_config_hitolo.pull = NRF_GPIO_PIN_PULLUP;
