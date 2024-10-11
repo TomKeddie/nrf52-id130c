@@ -39,12 +39,12 @@
  */
 
 #include "app_util_platform.h"
-#include "nrf_gpio.h"
 #include "nrf_delay.h"
 #include "app_error.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "nrfx_gpiote.h"
 
 #include "nrf_drv_spi.h"
 
@@ -62,6 +62,12 @@
 #define ID130C_PIN_LCD_CLK 24
 #undef ID130C_PIN_LCD_DATA
 #define ID130C_PIN_LCD_DATA 22
+#undef ID130C_PIN_TOUCH_EN_N
+#define ID130C_PIN_TOUCH_EN_N 0
+#undef ID130C_PIN_TOUCH_INT_N
+#define ID130C_PIN_TOUCH_INT_N 13
+#undef ID130C_PIN_LCD_BL_EN
+#define ID130C_PIN_LCD_BL_EN 17
 #endif
 
 #define ID130C_PIXELS_X 80
@@ -229,11 +235,12 @@ static const struct {
   {0x00, 1},  // 0
   {0x00, 1},
   {0x9F, 1},  // 159
+  {ST7735_RAMWR, 0},
 };
 
 static void fill_screen(uint16_t colour) {
   for (unsigned idx=0; idx < sizeof(sequence_ramwr)/sizeof(sequence_ramwr[0]); ++idx) {
-      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence_ramwr[idx].dc);
+      if (sequence_ramwr[idx].dc) nrfx_gpiote_out_set(ID130C_PIN_LCD_DC); else  nrfx_gpiote_out_clear(ID130C_PIN_LCD_DC);
       uint8_t buffer[] = { sequence_ramwr[idx].data  };
       nrfx_spi_xfer_desc_t spi_xfer_desc = {
 	.p_tx_buffer = buffer,
@@ -243,18 +250,7 @@ static void fill_screen(uint16_t colour) {
       };
       nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
   }
-  {
-    const uint8_t buffer[] = { ST7735_RAMWR };
-    nrfx_spi_xfer_desc_t spi_xfer_desc = {
-      .p_tx_buffer = buffer,
-      .tx_length   = sizeof(buffer),
-      .p_rx_buffer = NULL,
-      .rx_length   = 0
-    };
-    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 0);
-    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
-    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 1);
-  }
+  nrfx_gpiote_out_set(ID130C_PIN_LCD_DC);
   {
     uint16_t fill[ID130C_PIXELS_X];
     for (unsigned ix=0; ix < sizeof(fill)/sizeof(fill[0]); ++ix) {
@@ -274,7 +270,7 @@ static void fill_screen(uint16_t colour) {
 
 static void fill_logo(void) {
   for (unsigned idx=0; idx < sizeof(sequence_ramwr)/sizeof(sequence_ramwr[0]); ++idx) {
-      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, sequence_ramwr[idx].dc);
+      if (sequence_ramwr[idx].dc) nrfx_gpiote_out_set(ID130C_PIN_LCD_DC); else  nrfx_gpiote_out_clear(ID130C_PIN_LCD_DC);
       uint8_t buffer[] = { sequence_ramwr[idx].data  };
       nrfx_spi_xfer_desc_t spi_xfer_desc = {
 	.p_tx_buffer = buffer,
@@ -284,18 +280,7 @@ static void fill_logo(void) {
       };
       nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
   }
-  {
-    const uint8_t buffer[] = { ST7735_RAMWR };
-    nrfx_spi_xfer_desc_t spi_xfer_desc = {
-      .p_tx_buffer = buffer,
-      .tx_length   = sizeof(buffer),
-      .p_rx_buffer = NULL,
-      .rx_length   = 0
-    };
-    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 0);
-    nrfx_spi_xfer(&spi_instance, &spi_xfer_desc, 0);
-    nrf_gpio_pin_write(ID130C_PIN_LCD_DC, 1);
-  }
+  nrfx_gpiote_out_set(ID130C_PIN_LCD_DC);
   {
     nrfx_spi_xfer_desc_t spi_xfer_desc = {
       .p_tx_buffer = (uint8_t*) image,
@@ -322,29 +307,30 @@ static void lcd_init(void) {
   spi_config.mosi_pin = ID130C_PIN_LCD_DATA;
   spi_config.sck_pin  = ID130C_PIN_LCD_CLK;
   APP_ERROR_CHECK(nrfx_spi_init(&spi_instance, &spi_config, NULL, NULL));
-  
+
+  nrfx_gpiote_out_config_t out_config = NRFX_GPIOTE_CONFIG_OUT_SIMPLE(false);
+
   // backlight off
-  nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-  nrf_gpio_cfg_output(ID130C_PIN_LCD_BL_EN);
+  out_config.init_state = NRF_GPIOTE_INITIAL_VALUE_HIGH;
+  nrfx_gpiote_out_init(ID130C_PIN_LCD_BL_EN, &out_config);
 
   // pin defaults
-  nrf_gpio_pin_clear(ID130C_PIN_LCD_DC);
-  nrf_gpio_pin_clear(ID130C_PIN_LCD_RST_N);
-  nrf_gpio_pin_clear(ID130C_PIN_LCD_CS_N);
-  nrf_gpio_cfg_output(ID130C_PIN_LCD_RST_N);
-  nrf_gpio_cfg_output(ID130C_PIN_LCD_DC);
-  nrf_gpio_cfg_output(ID130C_PIN_LCD_CS_N);
+  out_config.init_state = NRF_GPIOTE_INITIAL_VALUE_LOW;
+  nrfx_gpiote_out_init(ID130C_PIN_LCD_DC, &out_config);
+  nrfx_gpiote_out_init(ID130C_PIN_LCD_RST_N, &out_config);
+  nrfx_gpiote_out_init(ID130C_PIN_LCD_CS_N, &out_config);
 
   // power on
-  nrf_gpio_pin_clear(ID130C_PIN_LCD_PWR_N);
-  nrf_gpio_cfg_output(ID130C_PIN_LCD_PWR_N);
+  out_config.init_state = NRF_GPIOTE_INITIAL_VALUE_LOW;
+  nrfx_gpiote_out_init(ID130C_PIN_LCD_PWR_N, &out_config);
+  nrfx_gpiote_out_init(ID130C_PIN_TOUCH_EN_N, &out_config);
 
   // reset
-  nrf_gpio_pin_set(ID130C_PIN_LCD_RST_N);
+  nrfx_gpiote_out_set(ID130C_PIN_LCD_RST_N);
   nrf_delay_ms(5);
-  nrf_gpio_pin_clear(ID130C_PIN_LCD_RST_N);
+  nrfx_gpiote_out_clear(ID130C_PIN_LCD_RST_N);
   nrf_delay_ms(5);
-  nrf_gpio_pin_set(ID130C_PIN_LCD_RST_N);
+  nrfx_gpiote_out_set(ID130C_PIN_LCD_RST_N);
 
   // pause then SLPOUT
   nrf_delay_ms(140);
@@ -362,7 +348,7 @@ static void lcd_init(void) {
   // pause then init sequence
   nrf_delay_ms(120);
   for (unsigned idx=0; idx < sizeof(init_sequence)/sizeof(init_sequence[0]); ++idx) {
-      nrf_gpio_pin_write(ID130C_PIN_LCD_DC, init_sequence[idx].dc);
+    if (init_sequence[idx].dc) nrfx_gpiote_out_set(ID130C_PIN_LCD_DC); else  nrfx_gpiote_out_clear(ID130C_PIN_LCD_DC);
       uint8_t buffer[] = { init_sequence[idx].data  };
       nrfx_spi_xfer_desc_t spi_xfer_desc = {
 	.p_tx_buffer = buffer,
@@ -390,48 +376,56 @@ static void lcd_init(void) {
   nrf_delay_ms(120);
 }
 
+void pin_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
+  switch(pin) {
+  case ID130C_PIN_TOUCH_INT_N :
+    nrfx_gpiote_out_toggle(ID130C_PIN_LCD_BL_EN);
+    break;
+  default:
+    break;
+  }
+}
+
 void app_error_fault_handler(uint32_t id, uint32_t pc, uint32_t info) {
   while(1);
 }
 
 int main(void)
 {
-    APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-    NRF_LOG_DEFAULT_BACKENDS_INIT();
+  APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
+  NRF_LOG_DEFAULT_BACKENDS_INIT();
+  
+  NRF_LOG_INFO("Demo application started.");
+  NRF_LOG_FLUSH();
 
-    NRF_LOG_INFO("Demo application started.")
-    NRF_LOG_FLUSH();
+ // misc init
+  APP_ERROR_CHECK(nrfx_gpiote_init());
 
-    lcd_init();
+  // touch init
+  nrfx_gpiote_in_config_t in_config_hitolo = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
+  in_config_hitolo.pull = NRF_GPIO_PIN_PULLUP;
+  APP_ERROR_CHECK(nrfx_gpiote_in_init(ID130C_PIN_TOUCH_INT_N, &in_config_hitolo, pin_handler));
+  nrfx_gpiote_in_event_enable(ID130C_PIN_TOUCH_INT_N, true);
 
-    while (1)
-    {
-      // Fill screen with blue
-      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-      fill_screen(0xf800);
-      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-      nrf_delay_ms(1000);
-      // Fill screen with red
-      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-      fill_screen(0x07e0);
-      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-      nrf_delay_ms(1000);
-      // Fill screen with green
-      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-      fill_screen(0x001f);
-      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-      nrf_delay_ms(1000);
-      // Fill screen with white
-      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-      fill_screen(0xffff);
-      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-      nrf_delay_ms(1000);
-      // Fill screen with logo
-      nrf_gpio_pin_clear(ID130C_PIN_LCD_BL_EN);
-      fill_logo();
-      fill_info();
-      nrf_gpio_pin_set(ID130C_PIN_LCD_BL_EN);
-      nrf_delay_ms(1000);
-    }
+  lcd_init();
+
+  while (1) {
+    // Fill screen with blue
+    fill_screen(0xf800);
+    nrf_delay_ms(1000);
+    // Fill screen with red
+    fill_screen(0x07e0);
+    nrf_delay_ms(1000);
+    // Fill screen with green
+    fill_screen(0x001f);
+    nrf_delay_ms(1000);
+    // Fill screen with white
+    fill_screen(0xffff);
+    nrf_delay_ms(1000);
+    // Fill screen with logo
+    fill_logo();
+    fill_info();
+    nrf_delay_ms(1000);
+  }
 }
 
