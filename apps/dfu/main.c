@@ -1,3 +1,4 @@
+// https://devzone.nordicsemi.com/guides/short-range-guides/b/software-development-kit/posts/getting-started-with-nordics-secure-dfu-bootloader
 /**
  * Copyright (c) 2014 - 2021, Nordic Semiconductor ASA
  *

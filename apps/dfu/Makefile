@@ -212,7 +212,10 @@ LIB_FILES += -lc -lnosys -lm
 .PHONY: default help
 
 # Default target - first one defined
-default: nrf52832_xxaa
+default: nrf52832_xxaa _build/nrf52832_xxaa.zip
+
+%.zip : %.hex
+	nrfutil pkg generate --hw-version 52 --application-version 1 --application $< --sd-req 0x101 --key-file ../../dfu_private_key.pem $@
 
 # Print all targets that can be built
 help:
