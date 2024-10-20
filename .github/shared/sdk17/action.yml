@@ -32,3 +32,4 @@ runs:
         chmod 755 nrfutil
         ./nrfutil install nrf5sdk-tools
         cd ${GITHUB_WORKSPACE}
+        echo ${GITHUB_WORKSPACE}/nrfutil >> $GITHUB_PATH
