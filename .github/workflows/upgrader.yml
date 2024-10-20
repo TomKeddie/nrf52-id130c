@@ -22,56 +22,35 @@ jobs:
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           submodules: 'true'
-      - uses: actions/checkout@v4
-      - uses: LizardByte/setup-python-action@master
-        with:
-          python-version: '2.7'
       - name: Get timestamp
         run: echo "MY_TIMESTAMP=$(date +%Y-%m-%d-%H-%M)" >> $GITHUB_ENV
       - name: Tag
         uses: mathieudutour/github-tag-action@v6.2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          custom_tag: ${{env.MY_TIMESTAMP}}
-      - name: Fetch tools
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          custom_tag: UPGRADER_${{env.MY_TIMESTAMP}}
+      - uses: ./.github/shared/sdk17
+      - uses: LizardByte/setup-python-action@master
+        with:
+          python-version: '2.7'
+      - name: Fetch SDK 11 tools
         run: |
           wget --no-verbose https://launchpad.net/gcc-arm-embedded/4.9/4.9-2015-q1-update/+download/gcc-arm-none-eabi-4_9-2015q1-20150306-linux.tar.bz2
           tar xjf gcc-arm-none-eabi-4_9-2015q1-20150306-linux.tar.bz2
           rm -f gcc-arm-none-eabi-4_9-2015q1-20150306-linux.tar.bz2
-          wget --no-verbose https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
-          tar xjf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
-          rm -f gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz
-      - name: Fetch SDKs
+      - name: Fetch SDK 11
         run: |
-          wget --no-verbose https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/nrf5_sdk_17.1.0_ddde560.zip
-          unzip -q nrf5_sdk_17.1.0_ddde560.zip
-          rm -f nrf5_sdk_17.1.0_ddde560.zip
           wget --no-verbose https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/nrf5sdk110089a8197.zip
           unzip -d nRF5_SDK_11.0.0_89a8197 -q nrf5sdk110089a8197.zip
           rm -f nrf5sdk110089a8197.zip
-          cp -f Makefile.posix.17.1 nRF5_SDK_17.1.0_ddde560/components/toolchain/gcc/Makefile.posix
           cp -f Makefile.posix.11.0 nRF5_SDK_11.0.0_89a8197/components/toolchain/gcc/Makefile.posix
-          cp -f upgrader/sdk_config.h nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/pca10040_s132_ble/config/
-      - name: Patch SDK 17.1 with uECC
-        run: |
-          cd nRF5_SDK_17.1.0_ddde560/external/micro-ecc
-          git clone https://github.com/kmackay/micro-ecc
-          cd nrf52hf_armgcc/armgcc
-          make
-          cd ${GITHUB_WORKSPACE}
-      - name: Install nrfutil
-        run: |
-          mkdir nrfutil
-          cd nrfutil
-          wget --no-verbose https://developer.nordicsemi.com/.pc-tools/nrfutil/x64-linux/nrfutil
-          chmod 755 nrfutil
-          ./nrfutil install nrf5sdk-tools
-          cd ${GITHUB_WORKSPACE}
       - name: Build SDK 17.1 bootloader example with our key
         run: |
+          cp -f upgrader/sdk_config.h nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/pca10040_s132_ble/config/
           cp -f dfu_public_key.c nRF5_SDK_17.1.0_ddde560/examples/dfu/dfu_public_key.c
           patch -i upgrader/nrf_dfu_ble.patch nRF5_SDK_17.1.0_ddde560/components/libraries/bootloader/ble_dfu/nrf_dfu_ble.c
           cd nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/pca10040_s132_ble/armgcc

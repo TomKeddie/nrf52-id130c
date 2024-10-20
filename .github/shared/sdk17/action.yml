@@ -1,0 +1,34 @@
+name: "Checkout and setup SDK 17"
+runs:
+  using: "composite"
+  steps:
+    - name: Fetch SDK 17.1 tools
+      shell: bash
+      run: |
+        wget --no-verbose https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2020q2/gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
+        tar xjf gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz2
+        rm -f gcc-arm-none-eabi-9-2020-q2-update-x86_64-linux.tar.bz
+    - name: Fetch, install and patch SDK 17.1
+      shell: bash
+      run: |
+        wget --no-verbose https://nsscprodmedia.blob.core.windows.net/prod/software-and-other-downloads/sdks/nrf5/binaries/nrf5_sdk_17.1.0_ddde560.zip
+        unzip -q nrf5_sdk_17.1.0_ddde560.zip
+        rm -f nrf5_sdk_17.1.0_ddde560.zip
+        cp -f Makefile.posix.17.1 nRF5_SDK_17.1.0_ddde560/components/toolchain/gcc/Makefile.posix
+    - name: Patch SDK 17.1 with uECC
+      shell: bash
+      run: |
+        cd nRF5_SDK_17.1.0_ddde560/external/micro-ecc
+        git clone https://github.com/kmackay/micro-ecc
+        cd nrf52hf_armgcc/armgcc
+        make
+        cd ${GITHUB_WORKSPACE}
+    - name: Install nrfutil
+      shell: bash
+      run: |
+        mkdir nrfutil
+        cd nrfutil
+        wget --no-verbose https://developer.nordicsemi.com/.pc-tools/nrfutil/x64-linux/nrfutil
+        chmod 755 nrfutil
+        ./nrfutil install nrf5sdk-tools
+        cd ${GITHUB_WORKSPACE}
