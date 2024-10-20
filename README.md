@@ -1,4 +1,8 @@
 # ID130C Fitness Band Project
+## Status
+![example workflow](https://github.com/TomKeddie/nrf52-id130c/actions/workflows/upgrader.yml/badge.svg)
+
+![example workflow](https://github.com/TomKeddie/nrf52-id130c/actions/workflows/apps.yml/badge.svg)
 
 ## Hardware
 Please refer to the hardware [documentation](doc)
