@@ -64,7 +64,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/modules/nrfx/drivers/include \
   $(SDK_ROOT)/components/libraries/log/src \
   $(SDK_ROOT)/components/libraries/atomic \
-  $(PROJ_DIR)/../../include \
+  $(PROJ_DIR)/../../src \
 
 # Libraries common to all targets
 LIB_FILES += \
