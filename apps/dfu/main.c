@@ -86,11 +86,14 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 #include "nrf_bootloader_info.h"
+#include "nrfx_gpiote.h"
+
+#include "id130c_pins.h"
 
 #define DEVICE_NAME                     "Nordic_Buttonless"                         /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                       /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                         /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
-#define APP_ADV_DURATION                18000                                       /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
+#define APP_ADV_DURATION                6000                                        /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 
 #define APP_BLE_OBSERVER_PRIO           3                                           /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the SoftDevice BLE configuration. */
@@ -283,20 +286,13 @@ static void conn_params_init(void) {
   APP_ERROR_CHECK(err_code);
 }
 
-static void sleep_mode_enter(void) {
-    //Disable SoftDevice. It is required to be able to write to GPREGRET2 register (SoftDevice API blocks it).
-    //GPREGRET2 register holds the information about skipping CRC check on next boot.
-    uint32_t err_code = nrf_sdh_disable_request();
-    APP_ERROR_CHECK(err_code);
-}
-
 static void on_adv_evt(ble_adv_evt_t ble_adv_evt) {
   switch (ble_adv_evt) {
   case BLE_ADV_EVT_FAST:
     break;
     
   case BLE_ADV_EVT_IDLE:
-    sleep_mode_enter();
+    NRF_LOG_INFO("Advertising stopped");
     break;
     
   default:
@@ -416,6 +412,24 @@ static void advertising_init(void) {
   ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
 }
 
+void pin_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
+  ret_code_t err_code;
+
+  switch(pin) {
+  case ID130C_PIN_TOUCH_INT_N :
+    if (m_advertising.adv_mode_current == BLE_ADV_MODE_IDLE) {
+      err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+      APP_ERROR_CHECK(err_code);
+      NRF_LOG_INFO("Touch detected - advertising started");
+    } else {
+      NRF_LOG_INFO("Touch detected");
+    }
+    break;
+  default:
+    break;
+  }
+}
+
 int main(void) {
   ret_code_t err_code = NRF_LOG_INIT(NULL);
   APP_ERROR_CHECK(err_code);
@@ -425,20 +439,26 @@ int main(void) {
   err_code = ble_dfu_buttonless_async_svci_init();
   APP_ERROR_CHECK(err_code);
 
-  err_code = app_timer_init();
-  APP_ERROR_CHECK(err_code);
-  err_code = nrf_pwr_mgmt_init();
-  APP_ERROR_CHECK(err_code);
+  APP_ERROR_CHECK(app_timer_init());
+  APP_ERROR_CHECK(nrf_pwr_mgmt_init());
   ble_stack_init();
   peer_manager_init();
   gap_params_init();
-  err_code = nrf_ble_gatt_init(&m_gatt, NULL);
-  APP_ERROR_CHECK(err_code);
+  APP_ERROR_CHECK(nrf_ble_gatt_init(&m_gatt, NULL));
   advertising_init();
   services_init();
   conn_params_init();
+  APP_ERROR_CHECK(nrfx_gpiote_init());
 
   NRF_LOG_INFO("Buttonless DFU Application started.");
+
+  nrfx_gpiote_out_config_t out_config = NRFX_GPIOTE_CONFIG_OUT_SIMPLE(false);
+  out_config.init_state = NRF_GPIOTE_INITIAL_VALUE_LOW;
+  nrfx_gpiote_out_init(ID130C_PIN_TOUCH_EN_N, &out_config);
+  nrfx_gpiote_in_config_t in_config_hitolo = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
+  in_config_hitolo.pull = NRF_GPIO_PIN_PULLUP;
+  APP_ERROR_CHECK(nrfx_gpiote_in_init(ID130C_PIN_TOUCH_INT_N, &in_config_hitolo, pin_handler));
+  nrfx_gpiote_in_event_enable(ID130C_PIN_TOUCH_INT_N, true);
 
   // Start execution.
   err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);

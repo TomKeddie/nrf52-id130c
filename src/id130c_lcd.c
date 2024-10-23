@@ -33,27 +33,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "nrf_drv_spi.h"
 #include "nrfx_gpiote.h"
 
-#include "crowd_supply_icon.h"
+#include "id130c_pins.h"
 
-#if 1
-// PCA10040 pin definitions
-#undef ID130C_PIN_LCD_RST_N
-#define ID130C_PIN_LCD_RST_N 20
-#undef ID130C_PIN_LCD_CS_N
-#define ID130C_PIN_LCD_CS_N 23
-#undef ID130C_PIN_LCD_DC
-#define ID130C_PIN_LCD_DC 19
-#undef ID130C_PIN_LCD_CLK
-#define ID130C_PIN_LCD_CLK 24
-#undef ID130C_PIN_LCD_DATA
-#define ID130C_PIN_LCD_DATA 22
-#undef ID130C_PIN_TOUCH_EN_N
-#define ID130C_PIN_TOUCH_EN_N 0
-#undef ID130C_PIN_TOUCH_INT_N
-#define ID130C_PIN_TOUCH_INT_N 13
-#undef ID130C_PIN_LCD_BL_EN
-#define ID130C_PIN_LCD_BL_EN 17
-#endif
+#include "crowd_supply_icon.h"
 
 #define LCD_SPI_INSTANCE 0
 static const nrfx_spi_t lcd_spi_instance = NRFX_SPI_INSTANCE(LCD_SPI_INSTANCE);
@@ -328,7 +310,6 @@ void id130c_lcd_init(void) {
   // power on
   out_config.init_state = NRF_GPIOTE_INITIAL_VALUE_LOW;
   nrfx_gpiote_out_init(ID130C_PIN_LCD_PWR_N, &out_config);
-  nrfx_gpiote_out_init(ID130C_PIN_TOUCH_EN_N, &out_config);
 
   // reset
   nrfx_gpiote_out_set(ID130C_PIN_LCD_RST_N);

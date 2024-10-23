@@ -101,6 +101,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/softdevice/s132/headers/nrf52 \
   $(SDK_ROOT)/components/libraries/util \
   . \
+  ../../src \
   $(SDK_ROOT)/components/ble/common \
   $(SDK_ROOT)/components/libraries/balloc \
   $(SDK_ROOT)/components/ble/peer_manager \
@@ -159,6 +160,7 @@ CFLAGS += -DNRF_DFU_TRANSPORT_BLE=1
 CFLAGS += -DNRF_SD_BLE_API_VERSION=7
 CFLAGS += -DS132
 CFLAGS += -DSOFTDEVICE_PRESENT
+CFLAGS += -DDEBUG
 CFLAGS += -mcpu=cortex-m4
 CFLAGS += -mthumb -mabi=aapcs
 CFLAGS += -Wall -Werror

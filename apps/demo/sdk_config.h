@@ -40,7 +40,6 @@
 
 #pragma once
 
-#include "id130c_pins.h"
 
 #define NRF_CLOCK_ENABLED 1
 #define CLOCK_CONFIG_LF_SRC 0

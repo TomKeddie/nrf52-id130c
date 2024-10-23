@@ -48,16 +48,7 @@
 #include "nrfx_timer.h"
 
 #include "id130c_lcd.h"
-
-#if 1
-// PCA10040 pin definitions
-#undef ID130C_PIN_TOUCH_EN_N
-#define ID130C_PIN_TOUCH_EN_N 0
-#undef ID130C_PIN_TOUCH_INT_N
-#define ID130C_PIN_TOUCH_INT_N 13
-#undef ID130C_PIN_LCD_BL_EN
-#define ID130C_PIN_LCD_BL_EN 17
-#endif
+#include "id130c_pins.h"
 
 #define BACKLIGHT_TIMER_DURATION_MS 5000
 
@@ -109,6 +100,9 @@ int main(void)
   nrfx_timer_extended_compare(&backlight_timer_instance, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK | NRF_TIMER_SHORT_COMPARE0_STOP_MASK, true);
  
   // touch init
+  nrfx_gpiote_out_config_t out_config = NRFX_GPIOTE_CONFIG_OUT_SIMPLE(false);
+  out_config.init_state = NRF_GPIOTE_INITIAL_VALUE_LOW;
+  nrfx_gpiote_out_init(ID130C_PIN_TOUCH_EN_N, &out_config);
   nrfx_gpiote_in_config_t in_config_hitolo = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
   in_config_hitolo.pull = NRF_GPIO_PIN_PULLUP;
   APP_ERROR_CHECK(nrfx_gpiote_in_init(ID130C_PIN_TOUCH_INT_N, &in_config_hitolo, pin_handler));
