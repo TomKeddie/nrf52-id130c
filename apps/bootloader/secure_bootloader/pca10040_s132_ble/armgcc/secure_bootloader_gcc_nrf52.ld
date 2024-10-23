@@ -1,0 +1,1 @@
+../../../../../nRF5_SDK_17.1.0_ddde560/examples/dfu/secure_bootloader/pca10040_s132_ble/armgcc/secure_bootloader_gcc_nrf52.ld

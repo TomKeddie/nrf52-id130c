@@ -1,0 +1,1 @@
+../../../../../upgrader/sdk_config.h
