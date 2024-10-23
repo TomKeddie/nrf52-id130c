@@ -252,7 +252,7 @@ static void fill_logo(void) {
   {
     nrfx_spi_xfer_desc_t spi_xfer_desc = {
       .p_tx_buffer = (uint8_t*) image,
-      .tx_length   = sizeof(image)-1,
+      .tx_length   = sizeof(uint16_t)*ID130C_PIXELS_X*ID130C_PIXELS_Y/2,
       .p_rx_buffer = NULL,
       .rx_length   = 0
     };
