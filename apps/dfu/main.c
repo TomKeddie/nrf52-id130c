@@ -417,6 +417,7 @@ void pin_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action) {
 
   switch(pin) {
   case ID130C_PIN_TOUCH_INT_N :
+  case ID130C_PIN_CHARGE_PRESENT_N:
     if (m_advertising.adv_mode_current == BLE_ADV_MODE_IDLE) {
       err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
       APP_ERROR_CHECK(err_code);
@@ -452,23 +453,36 @@ int main(void) {
 
   NRF_LOG_INFO("Buttonless DFU Application started.");
 
+  // Start execution.
+  if (m_advertising.adv_mode_current == BLE_ADV_MODE_IDLE) {
+    err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
+    APP_ERROR_CHECK(err_code);
+    NRF_LOG_DEBUG("advertising is started");
+  }
+#if 0
   nrfx_gpiote_out_config_t out_config = NRFX_GPIOTE_CONFIG_OUT_SIMPLE(false);
   out_config.init_state = NRF_GPIOTE_INITIAL_VALUE_LOW;
   nrfx_gpiote_out_init(ID130C_PIN_TOUCH_EN_N, &out_config);
+  nrfx_gpiote_out_init(ID130C_PIN_CHARGE_EN_N, &out_config);
   nrfx_gpiote_in_config_t in_config_hitolo = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(false);
   in_config_hitolo.pull = NRF_GPIO_PIN_PULLUP;
   APP_ERROR_CHECK(nrfx_gpiote_in_init(ID130C_PIN_TOUCH_INT_N, &in_config_hitolo, pin_handler));
+  in_config_hitolo.pull = NRF_GPIO_PIN_NOPULL;
+  APP_ERROR_CHECK(nrfx_gpiote_in_init(ID130C_PIN_CHARGE_PRESENT_N, &in_config_hitolo, pin_handler));
   nrfx_gpiote_in_event_enable(ID130C_PIN_TOUCH_INT_N, true);
 
-  // Start execution.
-  err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
-  APP_ERROR_CHECK(err_code);
-  NRF_LOG_DEBUG("advertising is started");
-
+  for (unsigned ix=0; ix < 32; ++ix) {
+    nrfx_gpiote_in_init(ix, &in_config_hitolo, pin_handler);
+  }
+#else
+  nrf_gpio_range_cfg_input(0, 31, NRF_GPIO_PIN_PULLUP);
+#endif
   // Enter main loop.
+  unsigned ix=0;
   for (;;) {
     if (NRF_LOG_PROCESS() == false) {
       nrf_pwr_mgmt_run();
     }
+    NRF_LOG_INFO("%d: %08x", ix++, NRF_P0->IN);
   }
 }
